@@ -62,9 +62,19 @@ def plot_data(x_values: List[float], y_values: List[List[float]], label: str, ou
         rpm for rpm, r in zip(means, ranges) if rpm > 0 and r <= threshold
     ]
     min_rpm = min(filtered_means)
-    max_rpm = max(means)
     min_power = x_values[means.index(min_rpm)]
-    max_power = x_values[means.index(max_rpm)]
+
+    # Find max_power based on the derivative of the means line, ignoring zero values
+    non_zero_means = [m for m in means if m > 0]
+    non_zero_x_values = [x for x, m in zip(x_values, means) if m > 0]
+    derivatives = np.gradient(non_zero_means, non_zero_x_values)  # Calculate the numerical derivative
+    derivative_threshold = 10  # Define a threshold for a nearly horizontal line
+    max_power_index = next(
+        (i for i, d in enumerate(derivatives) if abs(d) < derivative_threshold),
+        len(non_zero_x_values) - 1,  # Default to the last index if no threshold is met
+    )
+    max_power = non_zero_x_values[max_power_index-1]
+    max_rpm = non_zero_means[max_power_index-1]
 
     # Add horizontal lines for min and max RPM values
     plt.axhline(y=min_rpm, color="green", linestyle="--", label=f"Min RPM: {min_rpm}")
@@ -93,24 +103,8 @@ def plot_data(x_values: List[float], y_values: List[List[float]], label: str, ou
     plt.grid(True)
 
     # Customize x-axis labels to show 10 evenly spaced values from the range of x_values
-    num_ticks = 20
-    tick_positions = np.linspace(0.05, 1, num_ticks)
-    
-    #add min_power and max_power to the tick_positions 
-    tick_positions = np.append(tick_positions, [min_power, max_power])
-    tick_positions = np.unique(tick_positions)
-
-    tick_positions = np.sort(tick_positions)
-
-    #filter out values that are too close to each other (within .02 difference) but make sure to keep in the min_power and max_power values
-    for i in range(len(tick_positions)-1):
-        if abs(min_power - tick_positions[i]) < 0.025 and tick_positions[i] != min_power:
-            tick_positions = np.delete(tick_positions, i)
-
-    for i in range(len(tick_positions)-1):
-        if abs(max_power - tick_positions[i]) < 0.025 and tick_positions[i] != max_power:
-            tick_positions = np.delete(tick_positions, i)
-
+    num_ticks = 10
+    tick_positions = np.linspace(min(x_values), max(x_values), num_ticks)
     plt.xticks(ticks=tick_positions, labels=[f"{tick:.2f}" for tick in tick_positions])
 
     # Save the plot to a file

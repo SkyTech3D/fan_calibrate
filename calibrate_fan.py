@@ -12,17 +12,16 @@ class CalibrateFan:
         self.calibration_active = False
         self.sample_timer = None 
         self.fan_name = None
-        self.rpm_threshold = None
+
         self.measure_per_step = 3
-        
+
         self.printer.register_event_handler("klippy:ready", self._handle_ready)
 
 
     cmd_CALIBRATE_FAN_help = "Run fan calibration procedure to determine minimum power required to start fan and maximum power for fan operation." \
-    "Usage: CALIBRATE_FAN [FAN=<fan_name>] [STEPS=<steps>] [RPM_THRESHOLD=<rpm_threshold>]" \
+    "Usage: CALIBRATE_FAN [FAN=<fan_name>] [STEPS=<steps>]" \
     "FAN: Name of the fan to calibrate. Default: fan" \
     "STEPS: Number of steps to run the fan through. Default: 10" \
-    "RPM_THRESHOLD: Minimum RPM value increase to consider the fan speed as increasing. Default: 100"
 
     def _handle_ready(self):
         self.sample_timer = self.reactor.register_timer(self._next_calibration_step, self.reactor.NEVER)
@@ -41,8 +40,6 @@ class CalibrateFan:
         if fan is None:
             gcmd.respond_error("Fan not found")
             return
-        
-        self.rpm_threshold = int(gcmd.get('RPM_THRESHOLD', 100))
 
         # Start calibration sequence
         gcmd.respond_info("Calibrating fan %s" % self.fan_name)
@@ -136,7 +133,6 @@ class CalibrateFan:
         self.current_gcmd = None
         self.initial_fanstop_issued = False
         self.fan_name = None
-        self.rpm_threshold = None
 
     def _save_calibration_data(self):
 

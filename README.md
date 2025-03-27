@@ -15,12 +15,11 @@ Running the Calibration
 Use the CALIBRATE_FAN G-code command to start the fan calibration process. Example:
 
 ```
-CALIBRATE_FAN [FAN=<fan_name>] [STEPS=<steps>] [RPM_THRESHOLD=<rpm_threshold>]
+CALIBRATE_FAN [FAN=<fan_name>] [STEPS=<steps>]
 ```
 
 - FAN: Name of the fan to calibrate (default: fan).
 - STEPS: Number of steps to run the fan through (default: 10).
-- RPM_THRESHOLD: Minimum RPM value increase to consider the fan speed as increasing (default: 100).
 
 ## Plotting the Calibration Results
 
