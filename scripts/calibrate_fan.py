@@ -95,6 +95,14 @@ def plot_data(x_values: List[float], y_values: List[List[float]], label: str, ou
         verticalalignment="top", bbox=dict(boxstyle="round", facecolor="white", alpha=0.5)
     )
 
+    # Determine the first non-zero power value
+    first_non_zero_index = next((i for i, rpms in enumerate(y_values) if any(rpm > 0 for rpm in rpms)), 0)
+    first_non_zero_power = x_values[first_non_zero_index]
+
+    # Set the x-axis limits to start from the first non-zero power value
+    plt.xlim(left=first_non_zero_power)
+
+
     # Labels and title
     plt.xlabel("Power")
     plt.ylabel("RPM")
@@ -103,8 +111,23 @@ def plot_data(x_values: List[float], y_values: List[List[float]], label: str, ou
     plt.grid(True)
 
     # Customize x-axis labels to show 10 evenly spaced values from the range of x_values
-    num_ticks = 10
-    tick_positions = np.linspace(min(x_values), max(x_values), num_ticks)
+    num_ticks = 20
+    tick_positions = np.linspace(0.05, 1, num_ticks)
+    
+    #add min_power and max_power to the tick_positions 
+    tick_positions = np.append(tick_positions, [min_power, max_power])
+    tick_positions = np.unique(tick_positions)
+
+    tick_positions = np.sort(tick_positions)
+
+    #filter out values that are too close to each other (within .02 difference) but make sure to keep in the min_power and max_power values
+    for i in range(len(tick_positions)-1):
+        if abs(min_power - tick_positions[i]) < 0.025 and tick_positions[i] != min_power:
+            tick_positions = np.delete(tick_positions, i)
+
+    for i in range(len(tick_positions)-1):
+        if abs(max_power - tick_positions[i]) < 0.025 and tick_positions[i] != max_power:
+            tick_positions = np.delete(tick_positions, i)
     plt.xticks(ticks=tick_positions, labels=[f"{tick:.2f}" for tick in tick_positions])
 
     # Save the plot to a file
