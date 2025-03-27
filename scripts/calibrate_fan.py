@@ -123,7 +123,7 @@ def plot_data(x_values: List[float], y_values: List[List[float]], label: str, ou
 # Main execution
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python plot.py <input_csv_file> [output_file]")
+        print("Usage: python calibrate_fan.py <input_csv_file> [output_file_or_directory]")
         sys.exit(1)
 
     input_file = sys.argv[1]
@@ -133,10 +133,16 @@ if __name__ == "__main__":
 
     # Determine output file path
     if len(sys.argv) > 2:
-        output_file = sys.argv[2]  # Use the user-provided output file path
+        output_arg = sys.argv[2]
+        if os.path.isdir(output_arg):
+            # If the second argument is a directory, use it to construct the output file path
+            output_file = os.path.join(output_arg, os.path.splitext(os.path.basename(input_file))[0] + ".png")
+        else:
+            # If the second argument is a file path, use it as is
+            output_file = output_arg
     else:
-        # Default output file path: same directory as input file, with .png extension
-        output_file = os.path.splitext(input_file)[0] + ".png"
+        # Default output file path: use input filename without path, with .png extension
+        output_file = os.path.splitext(os.path.basename(input_file))[0] + ".png"
 
     # Prepare data and plot
     plot_data_dict = prepare_plot_data(input_file)
