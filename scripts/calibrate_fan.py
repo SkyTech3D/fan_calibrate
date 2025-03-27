@@ -1,14 +1,13 @@
-#!/usr/bin/env python3
-
 import matplotlib.pyplot as plt
 import csv
 from typing import Dict, List
 import os
 import sys
 import numpy as np
+from statistics import mean, stdev
 
-def load_data(file_path: str) -> Dict[float, float]:
-    """Load CSV data from a file and average RPM readings for duplicate power settings."""
+def load_data(file_path: str) -> Dict[float, List[float]]:
+    """Load CSV data from a file."""
     data = {}
     with open(file_path, "r") as file:
         reader = csv.reader(file)
@@ -25,10 +24,7 @@ def load_data(file_path: str) -> Dict[float, float]:
             except ValueError:
                 # Skip rows with invalid data
                 continue
-
-    # Average RPM readings for each power setting
-    averaged_data = {power: sum(rpms) / len(rpms) for power, rpms in data.items()}
-    return averaged_data
+    return data
 
 def prepare_plot_data(file_path: str) -> Dict[str, List[float]]:
     """Prepare x and y values for plotting from a single dataset."""
@@ -37,21 +33,44 @@ def prepare_plot_data(file_path: str) -> Dict[str, List[float]]:
     y_values = [data[x] for x in all_x_values]
     return {"x_values": all_x_values, "y_values": y_values}
 
-def plot_data(x_values: List[float], y_values: List[float], label: str, output_file: str, color: str = "blue"):
+def plot_data(x_values: List[float], y_values: List[List[float]], label: str, output_file: str, color: str = "blue"):
     """Plot the data and save it to a file."""
-    plt.figure(figsize=(10, 5))
+    plt.figure(figsize=(20, 10))
 
-    # Plot the dataset
-    plt.plot(x_values, y_values, label=label, color=color)
+    # Calculate mean and standard deviation for each power setting
+    means = [mean(rpms) for rpms in y_values]
+    stdevs = [stdev(rpms) if len(rpms) > 1 else 0 for rpms in y_values]
+
+    # Plot the mean line
+    plt.plot(x_values, means, label=label, color=color)
+
+    # Plot all individual RPM values as scatter points
+    for x, rpms in zip(x_values, y_values):
+        plt.scatter([x] * len(rpms), rpms, color=color, alpha=0.5, edgecolor="black", zorder=5, s=3)
+
+    # Add a shaded region for the standard deviation
+    lower_bound = [m - s for m, s in zip(means, stdevs)]
+    upper_bound = [m + s for m, s in zip(means, stdevs)]
+    plt.fill_between(x_values, lower_bound, upper_bound, color=color, alpha=0.9, label="±1 stdev")
+
+    # Filter out 0 values and those with outstandingly large ranges for min_rpm calculation
+    ranges = [u - l for u, l in zip(upper_bound, lower_bound)]
+    threshold = np.mean(ranges) + 2 * np.std(ranges)  # Define an outlier threshold
+    filtered_means = [
+        rpm for rpm, r in zip(means, ranges) if rpm > 0 and r <= threshold
+    ]
+    min_rpm = min(filtered_means)
+    max_rpm = max(means)
+    min_power = x_values[means.index(min_rpm)]
+    max_power = x_values[means.index(max_rpm)]
 
     # Add horizontal lines for min and max RPM values
-    min_rpm = min(y_values)
-    max_rpm = max(y_values)
-    min_power = x_values[y_values.index(min_rpm)]
-    max_power = x_values[y_values.index(max_rpm)]
-
     plt.axhline(y=min_rpm, color="green", linestyle="--", label=f"Min RPM: {min_rpm}")
     plt.axhline(y=max_rpm, color="red", linestyle="--", label=f"Max RPM: {max_rpm}")
+
+    # Add vertical lines at min_power and max_power
+    plt.axvline(x=min_power, color="green", linestyle="--", label=f"Min Power: {min_power}")
+    plt.axvline(x=max_power, color="red", linestyle="--", label=f"Max Power: {max_power}")
 
     # Add a textbox with recommended settings
     text = (
@@ -72,8 +91,24 @@ def plot_data(x_values: List[float], y_values: List[float], label: str, output_f
     plt.grid(True)
 
     # Customize x-axis labels to show 10 evenly spaced values from the range of x_values
-    num_ticks = 10
-    tick_positions = np.linspace(min(x_values), max(x_values), num_ticks)
+    num_ticks = 20
+    tick_positions = np.linspace(0.05, 1, num_ticks)
+    
+    #add min_power and max_power to the tick_positions 
+    tick_positions = np.append(tick_positions, [min_power, max_power])
+    tick_positions = np.unique(tick_positions)
+
+    tick_positions = np.sort(tick_positions)
+
+    #filter out values that are too close to each other (within .02 difference) but make sure to keep in the min_power and max_power values
+    for i in range(len(tick_positions)-1):
+        if abs(min_power - tick_positions[i]) < 0.025 and tick_positions[i] != min_power:
+            tick_positions = np.delete(tick_positions, i)
+
+    for i in range(len(tick_positions)-1):
+        if abs(max_power - tick_positions[i]) < 0.025 and tick_positions[i] != max_power:
+            tick_positions = np.delete(tick_positions, i)
+
     plt.xticks(ticks=tick_positions, labels=[f"{tick:.2f}" for tick in tick_positions])
 
     # Save the plot to a file
@@ -86,7 +121,7 @@ def plot_data(x_values: List[float], y_values: List[float], label: str, output_f
 # Main execution
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python calibrate_fan.py <input_csv_file> [output_file_or_directory]")
+        print("Usage: python plot.py <input_csv_file> [output_file]")
         sys.exit(1)
 
     input_file = sys.argv[1]
@@ -96,16 +131,10 @@ if __name__ == "__main__":
 
     # Determine output file path
     if len(sys.argv) > 2:
-        output_arg = sys.argv[2]
-        if os.path.isdir(output_arg):
-            # If the second argument is a directory, use it to construct the output file path
-            output_file = os.path.join(output_arg, os.path.splitext(os.path.basename(input_file))[0] + ".png")
-        else:
-            # If the second argument is a file path, use it as is
-            output_file = output_arg
+        output_file = sys.argv[2]  # Use the user-provided output file path
     else:
-        # Default output file path: use input filename without path, with .png extension
-        output_file = os.path.splitext(os.path.basename(input_file))[0] + ".png"
+        # Default output file path: same directory as input file, with .png extension
+        output_file = os.path.splitext(input_file)[0] + ".png"
 
     # Prepare data and plot
     plot_data_dict = prepare_plot_data(input_file)
