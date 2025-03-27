@@ -1,5 +1,5 @@
 #!/bin/bash
-repo=klipper_fan_calibrate
+repo=fan_calibrate
 repo_path="$(cd "$(dirname "$0")" && pwd)"
 
 # Exit if root
@@ -31,7 +31,7 @@ if [ -f "$blk_path" ]; then
           sed -i "\$a [update_manager $repo]" "$blk_path"
           sed -i "\$a type: git_repo" "$blk_path"
           sed -i "\$a path: $repo_path" "$blk_path"
-          sed -i "\$a origin: https://github.com/skyne/$repo.git" "$blk_path"
+          sed -i "\$a origin: https://github.com/SkyTech3D/$repo.git" "$blk_path"
           sed -i "\$a primary_branch: main" "$blk_path"
           sed -i "\$a managed_services: klipper" "$blk_path"
           # echo "Including [update_manager] to $blk_path successfully complete"
