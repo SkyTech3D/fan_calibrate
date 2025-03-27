@@ -8,14 +8,14 @@
 
 2. After installation is complete, add the following section to your printer.cfg file:
 
-    ```[calibrate_fan]```
+    ```[measure_fan]```
 
 ## Usage
 Running the Calibration
-Use the CALIBRATE_FAN G-code command to start the fan calibration process. Example:
+Use the MEASURE_FAN G-code command to start the fan calibration process. Example:
 
 ```
-CALIBRATE_FAN [FAN=<fan_name>] [STEPS=<steps>]
+MEASURE_FAN [FAN=<fan_name>] [STEPS=<steps>]
 ```
 
 - FAN: Name of the fan to calibrate (default: fan).

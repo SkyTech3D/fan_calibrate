@@ -3,23 +3,23 @@ import time
 import configfile
 
 
-class CalibrateFan:
+class MeasureFan:
     def __init__(self, config):
         # Initialize printer and reactor objects
         self.printer = config.get_printer()
         self.reactor = self.printer.get_reactor()
         self.gcode = self.printer.lookup_object('gcode')
 
-        # Register the CALIBRATE_FAN G-code command
+        # Register the MEASURE_FAN G-code command
         self.gcode.register_command(
-            'CALIBRATE_FAN',
-            self.cmd_CALIBRATE_FAN,
-            desc=self.cmd_CALIBRATE_FAN_help
+            'MEASURE_FAN',
+            self.cmd_MEASURE_FAN,
+            desc=self.cmd_MEASURE_FAN_help
         )
 
         # Initialize state variables
         self.current_gcmd = None
-        self.calibration_active = False
+        self.measure_active = False
         self.sample_timer = None
         self.fan = None
         self.fan_name = None
@@ -29,31 +29,31 @@ class CalibrateFan:
         self.printer.register_event_handler("klippy:ready", self._handle_ready)
 
     # G-code command help text
-    cmd_CALIBRATE_FAN_help = (
-        "Run fan calibration procedure to determine minimum power required to start fan "
+    cmd_MEASURE_FAN_help = (
+        "Run fan measurement procedure to determine minimum power required to start fan "
         "and maximum power for fan operation.\n"
-        "Usage: CALIBRATE_FAN [FAN=<fan_name>] [STEPS=<steps>]\n"
-        "FAN: Name of the fan to calibrate. Default: fan\n"
+        "Usage: MEASURE_FAN [FAN=<fan_name>] [STEPS=<steps>]\n"
+        "FAN: Name of the fan to measure. Default: fan\n"
         "STEPS: Number of steps to run the fan through. Default: 10"
     )
 
     # Event Handlers
     def _handle_ready(self):
-        """Register the timer for calibration steps when Klipper is ready."""
-        self.sample_timer = self.reactor.register_timer(self._next_calibration_step, self.reactor.NEVER)
+        """Register the timer for measurement steps when Klipper is ready."""
+        self.sample_timer = self.reactor.register_timer(self._next_measure_step, self.reactor.NEVER)
 
     # G-code Command Handlers
-    def cmd_CALIBRATE_FAN(self, gcmd):
-        """Handle the CALIBRATE_FAN G-code command."""
-        if self.calibration_active:
-            gcmd.respond_info("Calibration already in progress")
+    def cmd_MEASURE_FAN(self, gcmd):
+        """Handle the MEASURE_FAN G-code command."""
+        if self.measure_active:
+            gcmd.respond_info("Measure already in progress")
             return
 
         self._reset_state()
 
         # Parse G-code parameters
         self.current_gcmd = gcmd
-        self.calibration_active = True
+        self.measure_active = True
         self.steps = int(gcmd.get('STEPS', 10))
         self.measure_per_step = int(gcmd.get('MEASURE_PER_STEP', 3))
         self.fan_name = gcmd.get('FAN', 'fan')
@@ -62,11 +62,11 @@ class CalibrateFan:
         self.fan = self._try_find_fan(self.fan_name)
         if self.fan is None:
             gcmd.respond_error(f"Fan {self.fan_name} not found")
-            self.calibration_active = False
+            self.measure_active = False
             return
 
         # Start calibration
-        gcmd.respond_info(f"Calibrating fan {self.fan_name}")
+        gcmd.respond_info(f"Measuring fan {self.fan_name} ...")
         gcmd.respond_info(f"Running fan from 0 to 100% power in {self.steps} steps")
         self.reactor.update_timer(self.sample_timer, self.reactor.NOW)
 
@@ -77,9 +77,9 @@ class CalibrateFan:
         except configfile.error:
             return None
 
-    # Calibration Logic
-    def _next_calibration_step(self, eventtime):
-        """Perform the next step in the calibration process."""
+    # Measure Logic
+    def _next_measure_step(self, eventtime):
+        """Perform the next step in the measure process."""
         if self.current_step == 0:
             fan_rpm = self._measure_fan_speed(eventtime, drop_result=True)
             if fan_rpm is not None and fan_rpm > 0:
@@ -101,7 +101,7 @@ class CalibrateFan:
         self.current_step += 1
 
         if self.current_step > self.steps:
-            self._calibration_complete()
+            self._measure_complete()
             return self.reactor.NEVER
 
         # Set fan power for the current step
@@ -114,7 +114,7 @@ class CalibrateFan:
 
     def _measure_fan_speed(self, eventtime, drop_result=False):
         """Measure the fan speed and store the result."""
-        if not self.calibration_active:
+        if not self.measure_active:
             return None
 
         status = self.fan.get_status(eventtime)
@@ -126,17 +126,17 @@ class CalibrateFan:
 
         return status['rpm']
 
-    def _calibration_complete(self):
-        """Complete the calibration process."""
+    def _measure_complete(self):
+        """Complete the measure process."""
         self.current_gcmd.respond_info("Setting fan power to 0%")
         self._set_fan_power(0)
         self.current_gcmd.respond_info("Saving calibration data...")
-        self._save_calibration_data()
-        self.calibration_active = False
+        self._save_measure_data()
+        self.measure_active = False
         self._reset_state()
 
     # Utility Methods
-    def _save_calibration_data(self):
+    def _save_measure_data(self):
         """Save the calibration data to a CSV file."""
         filename = self._get_filename('calibration_data', time.strftime("%Y%m%d_%H%M%S"), self.fan_name)
         with open(filename, 'w') as f:
@@ -159,7 +159,7 @@ class CalibrateFan:
         self.gcode.run_script(cmd_str)
 
     def _reset_state(self):
-        """Reset the calibration state."""
+        """Reset the measure state."""
         self.current_step = 0
         self.current_measurement = 0
         self.data = []
@@ -180,5 +180,5 @@ class CalibrateFan:
 
 
 def load_config(config):
-    """Load the CalibrateFan module."""
-    return CalibrateFan(config)
+    """Load the MeasureFan module."""
+    return MeasureFan(config)

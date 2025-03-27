@@ -8,7 +8,7 @@ if [ "$(id -u)" = "0" ]; then
     exit
 fi
 
-module_name=calibrate_fan.py
+module_name=measure_fan.py
 module_path=~/klipper/klippy/extras/
 
 # Linking
