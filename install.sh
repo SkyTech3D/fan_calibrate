@@ -44,6 +44,4 @@ if [ -f "$blk_path" ]; then
     fi
 fi
 
-sudo apt update
-sudo apt install libatlas-base-dev libopenblas-dev
-sudo ~/klippy-env/bin/pip install -r "$repo_path/"wiki/requirements.txt
+sudo ~/klippy-env/bin/pip install -r "$repo_path/"requirements.txt
