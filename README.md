@@ -21,7 +21,7 @@ CALIBRATE_FAN [FAN=<fan_name>] [STEPS=<steps>] [RPM_THRESHOLD=<rpm_threshold>] [
 - FAN: Name of the fan to calibrate (default: fan).
 - STEPS: Number of steps to run the fan through (default: 10).
 - RPM_THRESHOLD: Minimum RPM value increase to consider the fan speed as increasing (default: 100).
-- SAVE=1: Wheter to generate a 
+- SAVE=1: Whether to generate a kalico compatible config change with `min_power` and `max_power` entries for the fan.
 
 ## Plotting the Calibration Results
 
